@@ -1,0 +1,4 @@
+Significance: minor
+Type: changed
+
+Keep the quiz pagination on the results screen, so a finished quiz shows one page of questions at a time instead of all answers on a single page.

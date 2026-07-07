@@ -1558,6 +1558,106 @@ class Sensei_Class_Quiz_Test extends WP_UnitTestCase {
 	}
 
 	/**
+	 * Ensure that pagination stays on after a quiz is submitted, so the results
+	 * screen shows one page at a time.
+	 *
+	 * @covers Sensei_Quiz::start_quiz_questions_loop
+	 * @group  questions
+	 */
+	public function testQuizQuestionsLoopShouldPaginate_QuizSubmitted_StillPaginates() {
+		/* Arrange */
+		global $post, $sensei_question_loop;
+
+		$user_id = $this->factory->user->create();
+		wp_set_current_user( $user_id );
+
+		$course_id = $this->factory->course->create();
+		$lesson_id = $this->factory->lesson->create(
+			[
+				'meta_input' => [
+					'_lesson_course' => $course_id,
+				],
+			]
+		);
+		$quiz_id = $this->factory->maybe_create_quiz_for_lesson( $lesson_id );
+		$post    = get_post( $quiz_id );
+
+		$this->factory->question->create_many( 10, [ 'quiz_id' => $quiz_id ] );
+
+		$course_enrolment = Sensei_Course_Enrolment::get_course_instance( $course_id );
+		$course_enrolment->enrol( $user_id );
+
+		update_post_meta(
+			$quiz_id,
+			'_pagination',
+			wp_json_encode( [ 'pagination_number' => 2 ] )
+		);
+
+		// Submit the quiz so it counts as completed.
+		remove_all_actions( 'sensei_user_quiz_submitted' );
+		remove_all_actions( 'sensei_user_lesson_end' );
+
+		$answers = $this->factory->generate_user_quiz_answers( $quiz_id );
+		WooThemes_Sensei_Quiz::submit_answers_for_grading( $answers, [], $lesson_id, $user_id );
+
+		/* Act */
+		Sensei_Quiz::start_quiz_questions_loop();
+
+		/* Assert */
+		$this->assertTrue( Sensei_Quiz::is_quiz_completed( $quiz_id, $user_id ), 'The quiz should be marked as completed.' );
+		$this->assertEquals( 2, $sensei_question_loop['posts_per_page'], 'Pagination should stay on after the quiz is submitted.' );
+		$this->assertEquals( 5, $sensei_question_loop['total_pages'], 'The loop `total_pages` should be calculated properly after submission.' );
+		$this->assertCount( 2, $sensei_question_loop['questions'], 'The loop should show a single page of questions after submission.' );
+		$this->assertEquals( 10, $sensei_question_loop['total'], 'The loop total questions count should be equal to the total questions count of the quiz.' );
+	}
+
+	/**
+	 * Ensure that a submitted quiz without pagination shows all questions on one page.
+	 *
+	 * @covers Sensei_Quiz::start_quiz_questions_loop
+	 * @group  questions
+	 */
+	public function testQuizQuestionsLoopShouldPaginate_NoPaginationSetting_QuestionsOnSinglePage() {
+		/* Arrange */
+		global $post, $sensei_question_loop;
+
+		$user_id = $this->factory->user->create();
+		wp_set_current_user( $user_id );
+
+		$course_id = $this->factory->course->create();
+		$lesson_id = $this->factory->lesson->create(
+			[
+				'meta_input' => [
+					'_lesson_course' => $course_id,
+				],
+			]
+		);
+		$quiz_id = $this->factory->maybe_create_quiz_for_lesson( $lesson_id );
+		$post    = get_post( $quiz_id );
+
+		$this->factory->question->create_many( 10, [ 'quiz_id' => $quiz_id ] );
+
+		$course_enrolment = Sensei_Course_Enrolment::get_course_instance( $course_id );
+		$course_enrolment->enrol( $user_id );
+
+		// No `_pagination` meta on this quiz.
+
+		// Submit the quiz so it counts as completed.
+		remove_all_actions( 'sensei_user_quiz_submitted' );
+		remove_all_actions( 'sensei_user_lesson_end' );
+
+		$answers = $this->factory->generate_user_quiz_answers( $quiz_id );
+		WooThemes_Sensei_Quiz::submit_answers_for_grading( $answers, [], $lesson_id, $user_id );
+
+		/* Act */
+		Sensei_Quiz::start_quiz_questions_loop();
+
+		/* Assert */
+		$this->assertEquals( 1, $sensei_question_loop['total_pages'], 'A quiz without pagination should stay on a single page after submission.' );
+		$this->assertCount( 10, $sensei_question_loop['questions'], 'All questions should show on one page when pagination is off.' );
+	}
+
+	/**
 	 * Ensure that a quiz is available only to course enrolled users.
 	 *
 	 * @covers Sensei_Quiz::is_quiz_available

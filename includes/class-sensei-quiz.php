@@ -1713,11 +1713,9 @@ class Sensei_Quiz {
 			$loop_questions = $all_questions;
 		}
 
-		// Don't use pagination if quiz has been completed.
-		$quiz_progress  = Sensei()->quiz_progress_repository->get( $quiz_id, get_current_user_id() );
-		$quiz_completed = $quiz_progress && $quiz_progress->is_quiz_submitted();
-
-		$sensei_question_loop['questions'] = $quiz_completed ? $all_questions : $loop_questions;
+		// Keep the same pagination after the quiz is submitted, so the results
+		// screen shows one page at a time and makes the answers harder to copy.
+		$sensei_question_loop['questions'] = $loop_questions;
 		$sensei_question_loop['quiz_id']   = $quiz_id;
 
 	}
@@ -2379,13 +2377,22 @@ class Sensei_Quiz {
 	/**
 	 * Replace all pagination links with buttons (<a> => <button>).
 	 *
+	 * Pass true to $use_links to keep the original <a> tags. This is used for a
+	 * submitted quiz, where the page change happens via a plain GET request
+	 * instead of the form submission.
+	 *
 	 * @since 3.15.0
 	 *
-	 * @param string $html The pagination html.
+	 * @param string $html       The pagination html.
+	 * @param bool   $use_links  Whether to keep the links as-is.
 	 *
 	 * @return string
 	 */
-	public function replace_pagination_links_with_buttons( $html ): string {
+	public function replace_pagination_links_with_buttons( $html, $use_links = false ): string {
+		if ( $use_links ) {
+			return $html;
+		}
+
 		return preg_replace(
 			'/<a.+?href="(.+?)">(.+?)<\/a>/',
 			'<button type="submit" name="quiz_target_page" form="sensei-quiz-form" value="$1" class="page-numbers">$2</button>',

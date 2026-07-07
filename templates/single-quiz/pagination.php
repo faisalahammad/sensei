@@ -54,8 +54,10 @@ $sensei_next_question_count  = min( $sensei_question_loop['total'] - $sensei_que
 			)
 		);
 
+		// A submitted quiz is read-only, so the page numbers navigate via a plain
+		// GET request. An in-progress quiz still needs form-submit buttons.
 		// phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- No need to escape the pagination.
-		echo Sensei()->quiz->replace_pagination_links_with_buttons( $sensei_pagination_list );
+		echo Sensei()->quiz->replace_pagination_links_with_buttons( $sensei_pagination_list, $sensei_is_quiz_completed );
 
 		?>
 	</div>
@@ -64,31 +66,51 @@ $sensei_next_question_count  = min( $sensei_question_loop['total'] - $sensei_que
 		<div class="sensei-quiz-actions-primary">
 			<?php if ( $sensei_question_loop['current_page'] > 1 ) : ?>
 				<div class="sensei-quiz-action wp-block-button is-style-outline">
-					<button
-						type="submit"
-						name="quiz_target_page"
-						form="sensei-quiz-form"
-						value="<?php echo esc_attr( add_query_arg( 'quiz-page', $sensei_question_loop['current_page'] - 1 ) ); ?>"
-						class="wp-block-button__link button sensei-stop-double-submission sensei-quiz-pagination__prev-button"
-						style="<?php echo esc_attr( $sensei_button_inline_styles ); ?>"
-					>
-						<?php echo esc_attr( _n( 'Previous Question', 'Previous Questions', $sensei_question_loop['posts_per_page'], 'sensei-lms' ) ); ?>
-					</button>
+					<?php if ( $sensei_is_quiz_completed ) : ?>
+						<a
+							href="<?php echo esc_url( add_query_arg( 'quiz-page', $sensei_question_loop['current_page'] - 1 ) ); ?>"
+							class="wp-block-button__link button sensei-quiz-pagination__prev-button"
+							style="<?php echo esc_attr( $sensei_button_inline_styles ); ?>"
+						>
+							<?php echo esc_html( _n( 'Previous Question', 'Previous Questions', $sensei_question_loop['posts_per_page'], 'sensei-lms' ) ); ?>
+						</a>
+					<?php else : ?>
+						<button
+							type="submit"
+							name="quiz_target_page"
+							form="sensei-quiz-form"
+							value="<?php echo esc_attr( add_query_arg( 'quiz-page', $sensei_question_loop['current_page'] - 1 ) ); ?>"
+							class="wp-block-button__link button sensei-stop-double-submission sensei-quiz-pagination__prev-button"
+							style="<?php echo esc_attr( $sensei_button_inline_styles ); ?>"
+						>
+							<?php echo esc_attr( _n( 'Previous Question', 'Previous Questions', $sensei_question_loop['posts_per_page'], 'sensei-lms' ) ); ?>
+						</button>
+					<?php endif ?>
 				</div>
 			<?php endif ?>
 
 			<?php if ( $sensei_question_loop['current_page'] < $sensei_question_loop['total_pages'] ) : ?>
 				<div class="sensei-quiz-action wp-block-button">
-					<button
-						type="submit"
-						name="quiz_target_page"
-						form="sensei-quiz-form"
-						value="<?php echo esc_attr( add_query_arg( 'quiz-page', $sensei_question_loop['current_page'] + 1 ) ); ?>"
-						class="wp-block-button__link button sensei-stop-double-submission sensei-quiz-pagination__next-button"
-						style="<?php echo esc_attr( $sensei_button_inline_styles ); ?>"
-					>
-						<?php echo esc_attr( _n( 'Next Question', 'Next Questions', $sensei_next_question_count, 'sensei-lms' ) ); ?>
-					</button>
+					<?php if ( $sensei_is_quiz_completed ) : ?>
+						<a
+							href="<?php echo esc_url( add_query_arg( 'quiz-page', $sensei_question_loop['current_page'] + 1 ) ); ?>"
+							class="wp-block-button__link button sensei-quiz-pagination__next-button"
+							style="<?php echo esc_attr( $sensei_button_inline_styles ); ?>"
+						>
+							<?php echo esc_html( _n( 'Next Question', 'Next Questions', $sensei_next_question_count, 'sensei-lms' ) ); ?>
+						</a>
+					<?php else : ?>
+						<button
+							type="submit"
+							name="quiz_target_page"
+							form="sensei-quiz-form"
+							value="<?php echo esc_attr( add_query_arg( 'quiz-page', $sensei_question_loop['current_page'] + 1 ) ); ?>"
+							class="wp-block-button__link button sensei-stop-double-submission sensei-quiz-pagination__next-button"
+							style="<?php echo esc_attr( $sensei_button_inline_styles ); ?>"
+						>
+							<?php echo esc_attr( _n( 'Next Question', 'Next Questions', $sensei_next_question_count, 'sensei-lms' ) ); ?>
+						</button>
+					<?php endif ?>
 				</div>
 			<?php endif ?>
 			<?php if ( $sensei_is_quiz_available && ! $sensei_is_quiz_completed ) : ?>
